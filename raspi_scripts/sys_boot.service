@@ -1,0 +1,13 @@
+[Unit]
+Description= Sys boot to start rpi from reset
+After=network.target
+
+[Service]
+Type=forking
+WorkingDirectory=/home/ubuntu
+ExecStart=/home/ubuntu/sys_boot.sh
+PIDFile=/run/sys_boot.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

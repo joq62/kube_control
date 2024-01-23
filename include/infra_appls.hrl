@@ -1,0 +1,1 @@
+-define(InfraAppls,["log","resource_discovery"]).

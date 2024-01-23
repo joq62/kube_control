@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,control}.
+{modules,[appl_ctrl,control,control_app,control_provider_server,control_sup,
+          lib_appl_ctrl,lib_control,lib_node_ctrl,lib_orchestrator,
+          lib_provider,node_ctrl,node_info,orchestrator,provider]}.

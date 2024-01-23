@@ -1,0 +1,2 @@
+rpc:call(control_a@c200,mnesia,system_info,[],6000).
+

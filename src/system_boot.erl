@@ -56,6 +56,7 @@ start_link() ->
 	  {stop, Reason :: term()} |
 	  ignore.
 init([]) ->
+   
     process_flag(trap_exit, true),
     timer:sleep(60*1000),
 

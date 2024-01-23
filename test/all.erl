@@ -27,10 +27,7 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
     ok=setup(),
-    ok=control_test:start(),
- %   ok=orchestrator_test:start(),
- %   ok=node_ctrl_test:start(),
- %   ok=appl_ctrl_test:start(),
+    ok=new_cluster_test:start(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
 %    timer:sleep(1000),
@@ -45,6 +42,9 @@ start()->
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
     
-    ok=application:start(control),
-    pong=control:ping(),
+    ok=kube_control:start(),
+    pong=log:ping(),
+    pong=rd:ping(),
+    pong=etcd:ping(),    
+    pong=kube_control:ping(),
     ok.

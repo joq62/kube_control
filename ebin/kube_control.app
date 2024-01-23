@@ -1,0 +1,12 @@
+{application,kube_control,
+             [{description,"An OTP application"},
+              {vsn,"0.1.0"},
+              {registered,[]},
+              {mod,{kube_control_app,[]}},
+              {applications,[kernel,stdlib]},
+              {env,[]},
+              {modules,[kube_api,kube_control,kube_control_app,
+                        kube_control_sup,kube_schduler,kube_scheduler,
+                        lib_control,system_boot]},
+              {licenses,["Apache-2.0"]},
+              {links,[]}]}.

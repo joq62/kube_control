@@ -61,7 +61,7 @@
 		cluster_status,
 		cluster_id,
 		kubelet_list,
-		deployment_list
+		application_list
 
 	       }).
 
@@ -191,7 +191,7 @@ init([]) ->
 	    cluster_status=not_created,
 	    cluster_id=undefined,
 	    kubelet_list=[],
-	    deployment_list=[]
+	    application_list=[]
 	    
 	   }}.
 
@@ -247,10 +247,11 @@ handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State)
 	  end,
     {reply, Reply, NewState};
  
+%%--------------------------------------------------------------------
 
 handle_call({delete_cluster,ClusterId}, _From, State) 
   when State#state.cluster_status==created andalso State#state.cluster_id==ClusterId->
-    
+  
     Result=try lib_control:delete_cluster(State#state.kubelet_list) of
 	       {ok,DeleteResult}->
 		   {ok,DeleteResult};
@@ -268,7 +269,7 @@ handle_call({delete_cluster,ClusterId}, _From, State)
 	      {ok,DelResult}->
 		  io:format("DelResult ~p~n",[{DelResult,?MODULE,?LINE}]),
 		  NewState=State#state{cluster_status=not_created,cluster_id=undefined,
-				       kubelet_list=[], deployment_list=[]},
+				       kubelet_list=[], application_list=[]},
 		  {ok,DelResult};
 	      ErrorEvent->
 		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
@@ -289,11 +290,53 @@ handle_call({delete_cluster,_ClusterId}, _From, State)
     Reply={error,["Cluster is not created "]},
     {reply, Reply, State};
 
+%%--------------------------------------------------------------------
 
+handle_call({deploy_application,ApplicationId,HostName}, _From, State) 
+  when State#state.cluster_status==created ->
 
-handle_call({deploy_application,ApplicationId,HostName}, _From, State) ->
-    Reply=not_implemented,
+    FilteredKubeletInfoList=[KubeletMap||{ok,KubeletMap}<-State#state.kubelet_list,      
+					 HostName==maps:get(hostname,KubeletMap)],
+    Result=case FilteredKubeletInfoList of
+	       []->
+		   {error,["No Kubelete node is created for Host ",HostName]};
+	       [KubeMap]->
+		   KubeletNode=maps:get(node,KubeMap),
+		   try lib_control:deploy_application(ApplicationId,KubeletNode) of
+		       {ok,AId,WNode}->
+			   {ok,AId,WNode};
+		       {error,Reason}->
+			   {error,Reason}
+		   catch
+		       error:Reason:Stacktrace->
+			   {error,Reason,Stacktrace,?MODULE,?LINE};
+		       throw:Reason:Stacktrace->
+			   {throw,Reason,Stacktrace,?MODULE,?LINE};
+		       Event:Reason:Stacktrace ->
+			   {Event,Reason,Stacktrace,?MODULE,?LINE}
+		   end
+	   end,
+    Reply=case Result of
+	      {ok,ApplicationId,WorkerNode}->
+		  io:format("ApplicationId,WorkerNode ~p~n",[{ApplicationId,WorkerNode,?MODULE,?LINE}]),
+		  NewAppList=[{ApplicationId,WorkerNode}|State#state.application_list],
+		  NewState=State#state{application_list=NewAppList},
+		  {ok,ApplicationId,WorkerNode};
+	      ErrorEvent->
+		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
+		  NewState=State,
+		  {error,ErrorEvent}
+	  end,   
+    {reply, Reply, NewState};
+
+handle_call({deploy_application,ApplicationId,HostName}, _From, State) 
+  when State#state.cluster_status==not_created ->
+  
+    Reply={error,["Cluster is not created, create a cluster and then deploy application"]},
     {reply, Reply, State};
+
+%%--------------------------------------------------------------------
+
 
 handle_call({remove_application,ApplicationId,WorkerNode}, _From, State) ->
      Reply=not_implemented,

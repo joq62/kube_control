@@ -27,7 +27,8 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
     
     ok=setup(),
-    ok=new_cluster_test:start(),
+    ok=cluster_test:start(),
+    ok=application_test:start(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
 %    timer:sleep(1000),

@@ -13,6 +13,10 @@
 -include("control_config.hrl").
 
 
+
+-define(ClusterId,"test_cluster").
+-define(HostNameNumWorkers,[{"c50",6}]).
+
 %% API
 -export([start/0]).
 
@@ -30,7 +34,7 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
   
     ok=setup(),
-
+    ok=new_cluster(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
     timer:sleep(2000),
@@ -39,6 +43,17 @@ start()->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+new_cluster()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    {ok,[{ok,"c50",'kubelet_a@c50'}]}=kube_control:new_cluster(?ClusterId,?HostNameNumWorkers),
+    ok.
 
 
 %%--------------------------------------------------------------------

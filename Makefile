@@ -176,25 +176,25 @@ eunit:
 	#INFO: Creating eunit test code using test_ebin dir;
 	mkdir test_ebin;
 	cp test/*.app test_ebin;
-	rm test/dependent_apps.erl;
-	cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
+	#rm test/dependent_apps.erl;
+	#cp /home/joq62/erlang/dev_support/dependent_apps.erl test;
 	erlc -I include -I /home/joq62/erlang/include -o test_ebin test/*.erl;
 	#INFO: Creating Common applications needed for testing
 	#INFO: Creating log
-	rm -rf log;
-	git clone https://github.com/joq62/log.git log;
-	erlc -I log/include -I include -I /home/joq62/erlang/include -o test_ebin log/src/*.erl;
-	cp log/src/log.app.src test_ebin/log.app;
+	#rm -rf log;
+	#git clone https://github.com/joq62/log.git log;
+	#erlc -I log/include -I include -I /home/joq62/erlang/include -o test_ebin log/src/*.erl;
+	#cp log/src/log.app.src test_ebin/log.app;
 	#INFO: Creating resource_discovery
-	rm -rf resource_discovery;
-	git clone https://github.com/joq62/resource_discovery.git resource_discovery;
-	erlc -I resource_discovery/include -I include -I /home/joq62/erlang/include -o test_ebin resource_discovery/src/*.erl;
-	cp resource_discovery/src/rd.app.src test_ebin/rd.app;
+	#rm -rf resource_discovery;
+	#git clone https://github.com/joq62/resource_discovery.git resource_discovery;
+	#erlc -I resource_discovery/include -I include -I /home/joq62/erlang/include -o test_ebin resource_discovery/src/*.erl;
+	#cp resource_discovery/src/rd.app.src test_ebin/rd.app;
 	#INFO: Creating etcd 
-	rm -rf etcd;
-	git clone https://github.com/joq62/etcd.git etcd;
-	erlc -I etcd/include -I include -I /home/joq62/erlang/include -o test_ebin etcd/src/*.erl;
-	cp etcd/src/etcd.app.src test_ebin/etcd.app;
+	#rm -rf etcd;
+	#git clone https://github.com/joq62/etcd.git etcd;
+	#erlc -I etcd/include -I include -I /home/joq62/erlang/include -o test_ebin etcd/src/*.erl;
+	#cp etcd/src/etcd.app.src test_ebin/etcd.app;
 	#INFO: Compile application
 	mkdir ebin;		
 	rebar3 compile;	

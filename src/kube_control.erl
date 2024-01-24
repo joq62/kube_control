@@ -24,7 +24,7 @@
 %% API
 
 -export([
-	 new_cluster/3,
+	 new_cluster/2,
 	 delete_cluster/1, 	
 	 deploy_application/2, 
 	 remove_application/2,
@@ -109,10 +109,10 @@ remove_application(ApplicationId,WorkerNode) ->
 %% 
 %% @end
 %%--------------------------------------------------------------------
--spec new_cluster(ClusterId::string(),CookieStr::string(),HostNameNumWorkers::term()) -> ok | 
+-spec new_cluster(ClusterId::string(),HostNameNumWorkers::term()) -> ok | 
 	  {error, Error :: term()}.
-new_cluster(ClusterId,CookieStr,HostNameNumWorkers) ->
-    gen_server:call(?SERVER,{new_cluster,ClusterId,CookieStr,HostNameNumWorkers},infinity).
+new_cluster(ClusterId,HostNameNumWorkers) ->
+    gen_server:call(?SERVER,{new_cluster,ClusterId,HostNameNumWorkers},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -216,10 +216,12 @@ init([]) ->
 
 
 
-handle_call({new_cluster,ClusterId,CookieStr,HostNameNumWorkers}, _From, State) ->
-    Result=try lib_control:new_cluster(ClusterId,CookieStr,HostNameNumWorkers) of
+handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State) ->
+    Result=try lib_control:new_cluster(HostNameNumWorkers) of
 	       {ok,CreateResult}->
-		   {ok,CreateResult}
+		   {ok,CreateResult};
+	       {error,Reason}->
+		   {error,Reason}
 	   catch
 	       error:Reason:Stacktrace->
 		   {error,Reason,Stacktrace,?MODULE,?LINE};
@@ -230,9 +232,11 @@ handle_call({new_cluster,ClusterId,CookieStr,HostNameNumWorkers}, _From, State) 
 	   end,
     Reply=case Result of
 	      {ok,Info}->
+		  io:format("CreateResult ~p~n",[{Info,?MODULE,?LINE}]),
 		  NewState=State,
-		  ok;
+		  {ok,Info};
 	      ErrorEvent->
+		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
 		  NewState=State,
 		  {error,ErrorEvent}
 	  end,

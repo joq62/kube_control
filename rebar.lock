@@ -1,6 +1,6 @@
 [{<<"etcd">>,
   {git,"https://github.com/joq62/etcd.git",
-       {ref,"3c45abfc96a0cdb894d150db431ce00102b4db0a"}},
+       {ref,"cd73f7ae19df246d805fb61e88dfd6e277a244ef"}},
   0},
  {<<"log">>,
   {git,"https://github.com/joq62/log.git",
@@ -9,4 +9,8 @@
  {<<"resource_discovery">>,
   {git,"https://github.com/joq62/resource_discovery.git",
        {ref,"353a4cff1655d5dfe3c0590a8d6616bbe08bf714"}},
+  0},
+ {<<"ssh_service">>,
+  {git,"https://github.com/joq62/ssh_service.git",
+       {ref,"12ec447d4db0cc7438147aafdb954a57bcce737d"}},
   0}].

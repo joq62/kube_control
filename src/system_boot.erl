@@ -107,10 +107,12 @@ init([]) ->
     
     RdStart=rpc:call(node(),application,start,[rd],2*5000),   
     EtcdStart=rpc:call(node(),application,start,[etcd],2*5000),   
+    SshServiceStart=rpc:call(node(),application,start,[ssh_service],2*5000),   
    
     ?LOG_NOTICE("LogStart ",[{log,LogStart}]),
     ?LOG_NOTICE("RdStart ",[{rd,RdStart}]),
     ?LOG_NOTICE("EtcdStart ",[{etcd,EtcdStart}]),
+    ?LOG_NOTICE("EtcdStart ",[{ssh_service,SshServiceStart}]),
     ?LOG_NOTICE("ConnectResult ",[ConnectResult]),
     ?LOG_NOTICE("CreateLogFileResult ",[CreateLogFileResult]),
     

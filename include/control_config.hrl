@@ -1,3 +1,8 @@
+-define(KubeletNodeName,"kubelet").
+-define(KubeletDir,"kubelet").
+
+
+
 -define(DeploymentSpec,"permanent").
 -define(InfraSpec,"basic").
 

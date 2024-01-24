@@ -58,11 +58,10 @@
 -define(SERVER, ?MODULE).
 		     
 -record(state, {
-		running_worker_nodes,
-		node_info_list,
-		num_workers,
-		hostname,
-		cookie_str
+		cluster_status,
+		cluster_id,
+		kubelet_list,
+		deployment_list
 
 	       }).
 
@@ -189,11 +188,10 @@ init([]) ->
     
     ?LOG_NOTICE("Server started ",[?MODULE]),
     {ok, #state{
-%	    running_worker_nodes=[],
-%	    node_info_list=NodeInfoList,
-%	    num_workers=NumWorkers,
-%	    hostname=HostName,
-%	    cookie_str=CookieStr
+	    cluster_status=not_created,
+	    cluster_id=undefined,
+	    kubelet_list=[],
+	    deployment_list=[]
 	    
 	   }}.
 
@@ -215,8 +213,15 @@ init([]) ->
 
 
 
-
-handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State) ->
+handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State)
+  when State#state.cluster_status==created ->
+    
+    Reply={error,["Cluster is already created with the cluster name ",State#state.cluster_id]},
+    {reply, Reply, State};
+    
+handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State) 
+  when State#state.cluster_status==not_created ->
+  
     Result=try lib_control:new_cluster(HostNameNumWorkers) of
 	       {ok,CreateResult}->
 		   {ok,CreateResult};
@@ -231,22 +236,59 @@ handle_call({new_cluster,ClusterId,HostNameNumWorkers}, _From, State) ->
 		   {Event,Reason,Stacktrace,?MODULE,?LINE}
 	   end,
     Reply=case Result of
-	      {ok,Info}->
-		  io:format("CreateResult ~p~n",[{Info,?MODULE,?LINE}]),
-		  NewState=State,
-		  {ok,Info};
+	      {ok,KubeletList}->
+		  io:format("CreateResult ~p~n",[{KubeletList,?MODULE,?LINE}]),
+		  NewState=State#state{cluster_status=created,cluster_id=ClusterId,kubelet_list=KubeletList},
+		  {ok,KubeletList};
 	      ErrorEvent->
 		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
 		  NewState=State,
 		  {error,ErrorEvent}
 	  end,
-    
     {reply, Reply, NewState};
  
 
-handle_call({delete_cluster,ClusterId}, _From, State) ->
-    Reply=not_implemented,
+handle_call({delete_cluster,ClusterId}, _From, State) 
+  when State#state.cluster_status==created andalso State#state.cluster_id==ClusterId->
+    
+    Result=try lib_control:delete_cluster(State#state.kubelet_list) of
+	       {ok,DeleteResult}->
+		   {ok,DeleteResult};
+	       {error,Reason}->
+		   {error,Reason}
+	   catch
+	       error:Reason:Stacktrace->
+		   {error,Reason,Stacktrace,?MODULE,?LINE};
+	       throw:Reason:Stacktrace->
+		   {throw,Reason,Stacktrace,?MODULE,?LINE};
+	       Event:Reason:Stacktrace ->
+		   {Event,Reason,Stacktrace,?MODULE,?LINE}
+	   end,
+    Reply=case Result of
+	      {ok,DelResult}->
+		  io:format("DelResult ~p~n",[{DelResult,?MODULE,?LINE}]),
+		  NewState=State#state{cluster_status=not_created,cluster_id=undefined,
+				       kubelet_list=[], deployment_list=[]},
+		  {ok,DelResult};
+	      ErrorEvent->
+		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
+		  NewState=State,
+		  {error,ErrorEvent}
+	  end,   
+    {reply, Reply, NewState};
+
+handle_call({delete_cluster,ClusterId}, _From, State) 
+  when State#state.cluster_status==created andalso State#state.cluster_id=/=ClusterId->
+    
+    Reply={error,["Unknown ClusterId, The current ClusterId is = ",State#state.cluster_id]},
     {reply, Reply, State};
+
+handle_call({delete_cluster,_ClusterId}, _From, State) 
+  when State#state.cluster_status==not_created ->
+  
+    Reply={error,["Cluster is not created "]},
+    {reply, Reply, State};
+
 
 
 handle_call({deploy_application,ApplicationId,HostName}, _From, State) ->
@@ -299,24 +341,7 @@ handle_cast(UnMatchedSignal, State) ->
 handle_info({nodedown,Node}, State) ->
     io:format("nodedown,Node  ~p~n",[{Node,?MODULE,?LINE}]),
     erlang:monitor_node(Node,false),
-    case node_info:find(State#state.running_worker_nodes,Node) of
-	false->
-	    NewState=State,
-	    {error,["Node doesnt exist i running_worker_nodes ",Node,?MODULE,?LINE]};
-	NodeInfo->
-	    case lib_node_ctrl:create_worker(NodeInfo) of
-		{error,Reason}->
-		    NewState=State,
-		    {error,Reason};
-		{ok,NewNodeInfo}->
-		    io:format("NewNodeInfo  ~p~n",[{NewNodeInfo,?MODULE,?LINE}]),
-		    erlang:monitor_node(NewNodeInfo#node_info.worker_node,true),
-		    RunningDeleted=lists:delete(NodeInfo,State#state.running_worker_nodes),
-		    NewRunningList=[NewNodeInfo|RunningDeleted],
-		    NewState=State#state{running_worker_nodes=NewRunningList}
-			
-	    end
-    end,
+    NewState=State,
     {noreply, NewState};
 
 

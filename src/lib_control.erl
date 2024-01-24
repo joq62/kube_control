@@ -14,6 +14,12 @@
 %% API
 -export([
 	 new_cluster/1,
+	 delete_cluster/1,
+	 deploy_application/2
+	 
+	]).
+
+-export([
 	 start_kubelet/2
 	]).
 
@@ -34,11 +40,38 @@ new_cluster([{HostName,NumWorkers}|T],Acc) ->
     Timeout=NumWorkers*3000,
     Result=case rpc:call(node(),lib_control,start_kubelet,[HostName,NumWorkers],Timeout) of
 	       {ok,Node}->
-		   {ok,HostName,Node};
+		   {ok,#{hostname=>HostName,node=>Node}};
 	       {badrpc,Reason} ->
 		   {error,["Error trying to start kubelet on Host ",HostName,NumWorkers,Reason,?MODULE,?LINE]}
 	   end,
     new_cluster(T,[Result|Acc]).
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+delete_cluster(KubeletList)->
+    stop_kubelet(KubeletList,[]).
+
+stop_kubelet([],Acc)->
+    {ok,Acc};
+stop_kubelet([{error,_}|T],Acc)->
+    stop_kubelet(T,Acc);
+stop_kubelet([{ok,KubeletInfo}|T],Acc)->
+    KubeletNode=maps:get(node,KubeletInfo),
+    rpc:call(KubeletNode,init,stop,[],5000),
+    IsStopped=is_stopped(KubeletNode),
+    stop_kubelet(T,[{IsStopped,KubeletInfo}|Acc]).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% 
+%% @end
+%%--------------------------------------------------------------------
+deploy_application(ApplicationId,KubeletNode)->
+    {ok,{ApplicationId,WorkerNode}}=rpc:call(KubeletNode,kubelet,deploy_application,[ApplicationId],2*5000).
 
 %%%===================================================================
 %%% Internal functions
@@ -49,11 +82,9 @@ new_cluster([{HostName,NumWorkers}|T],Acc) ->
 %% @end
 %%--------------------------------------------------------------------
 start_kubelet(HostName,NumWorkers)->
-    io:format("HostName ~p~n",[{HostName,?MODULE,?LINE}]),	
     {HostName,Ip,Port,Uid,Pwd,_}=etcd_host:get_info(HostName),
-    %% Working directory
-    TimeOut=5000,
-    io:format("Ip,Port,Uid,Pwd ~p~n",[{Ip,Port,Uid,Pwd,?MODULE,?LINE}]),					
+    io:format("HostName,Ip,Port,Uid,Pwd ~p~n",[{HostName,Ip,Port,Uid,Pwd,?MODULE,?LINE}]),	
+   				
     %start vm 
     {ok,HostName}=net:gethostname(),
     CookieStr=atom_to_list(erlang:get_cookie()),
@@ -61,20 +92,18 @@ start_kubelet(HostName,NumWorkers)->
     Node=list_to_atom(NodeName++"@"++HostName),
     rpc:call(Node,init,stop,[],5000),
     true=is_stopped(Node),
-    io:format("is_stopped(Node) ~p~n",[{is_stopped(Node),?MODULE,?LINE}]),	
+  
     ErlCmd="erl -sname "++NodeName++" "++"-setcookie "++CookieStr++" "++"-noinput -detached",
+    TimeOut=5000,
     {ok,[]}=ssh_service:send_msg(Ip,Port,Uid,Pwd,ErlCmd,TimeOut),
     true=is_started(Node),
-    io:format("is_started(Node) ~p~n",[{is_started(Node),?MODULE,?LINE}]),	
+  
     %% Start kubelet 
     {ok,[Home]}=ssh_service:send_msg(Ip,Port,Uid,Pwd,"pwd",TimeOut),
     Ebin=filename:join([Home,?KubeletDir,"ebin"]),
     true=rpc:call(Node,code, add_path,[Ebin],5000),
-   % KubeletBeam=filename:join([Home,?KubeletDir,"ebin","kubelet.beam"]),
-   % KubeletBeam=rpc:call(Node,code, where_is_file,["kubelet.beam"],5000),
     ok=rpc:call(Node,application,load,[kubelet],5000),
     ok=rpc:call(Node,application,start,[kubelet],5000),
-    io:format("Started kubelet ~p~n",[{?MODULE,?LINE}]),	
     pong=rpc:call(Node,kubelet,ping,[],5000),
     ok=create_workers(Node,NumWorkers),
     {ok,Node}.

@@ -303,8 +303,8 @@ handle_call({deploy_application,ApplicationId,HostName}, _From, State)
 	       [KubeMap]->
 		   KubeletNode=maps:get(node,KubeMap),
 		   try lib_control:deploy_application(ApplicationId,KubeletNode) of
-		       {ok,AId,WNode}->
-			   {ok,AId,WNode};
+		       {ok,AId,KNode,WNode}->
+			   {ok,AId,KNode,WNode};
 		       {error,Reason}->
 			   {error,Reason}
 		   catch
@@ -317,13 +317,13 @@ handle_call({deploy_application,ApplicationId,HostName}, _From, State)
 		   end
 	   end,
     Reply=case Result of
-	      {ok,ApplicationId,WorkerNode}->
-		  io:format("ApplicationId,WorkerNode ~p~n",[{ApplicationId,WorkerNode,?MODULE,?LINE}]),
-		  NewAppList=[{ApplicationId,WorkerNode}|State#state.application_list],
+	      {ok,ApplId,KubeNode,WorkNode}->
+	%	  io:format("ApplicationId,KubeletNode,WorkerNode ~p~n",[{ApplId,KubeNode,WorkNode,?MODULE,?LINE}]),
+		  NewAppList=[#{applid=>ApplId,kubeletnode=>KubeNode,workernode=>WorkNode}|State#state.application_list],
 		  NewState=State#state{application_list=NewAppList},
-		  {ok,ApplicationId,WorkerNode};
+		  {ok,ApplId,KubeNode,WorkNode};
 	      ErrorEvent->
-		  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
+	%	  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
 		  NewState=State,
 		  {error,ErrorEvent}
 	  end,   
@@ -337,10 +337,45 @@ handle_call({deploy_application,ApplicationId,HostName}, _From, State)
 
 %%--------------------------------------------------------------------
 
+handle_call({remove_application,ApplicationId,WorkerNode}, _From, State)
+  when State#state.cluster_status==created ->
+    
+    FilteredApplicationMapList=[ApplicationMap||ApplicationMap<-State#state.application_list,      
+						WorkerNode==maps:get(workernode,ApplicationMap),
+						ApplicationId==maps:get(applid,ApplicationMap)],
+    Result=case FilteredApplicationMapList of
+	       []->
+		   {error,["No worker node or application is defined ",ApplicationId,WorkerNode]};
+	       [ApplMap]->
+		   KubeletNode=maps:get(kubeletnode,ApplMap),
+		   try lib_control:remove_application(ApplicationId,KubeletNode,WorkerNode) of
+		       ok->
+			   {ok,ApplMap};
+		       {error,Reason}->
+			   {error,Reason}
+		   catch
+		       error:Reason:Stacktrace->
+			   {error,Reason,Stacktrace,?MODULE,?LINE};
+		       throw:Reason:Stacktrace->
+			   {throw,Reason,Stacktrace,?MODULE,?LINE};
+		       Event:Reason:Stacktrace ->
+			   {Event,Reason,Stacktrace,?MODULE,?LINE}
+		   end
+	   end,
+    Reply=case Result of
+	      {ok,ApplicationMap}->
+		  io:format("ApplicationMap ~p~n",[{ApplicationMap,?MODULE,?LINE}]),
+		  NewAppList=lists:delete(ApplicationMap,State#state.application_list),
+		  NewState=State#state{application_list=NewAppList},
+		  {ok,ApplicationMap};
+	      ErrorEvent->
+	%	  io:format("ErrorEvent ~p~n",[{ErrorEvent,?MODULE,?LINE}]),
+		  NewState=State,
+		  {error,ErrorEvent}
+	  end,   
+    {reply, Reply, NewState};
 
-handle_call({remove_application,ApplicationId,WorkerNode}, _From, State) ->
-     Reply=not_implemented,
-    {reply, Reply, State};
+%%--------------------------------------------------------------------
 
 handle_call({which_applications}, _From, State) ->
      Reply=not_implemented,

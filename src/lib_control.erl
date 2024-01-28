@@ -15,7 +15,8 @@
 -export([
 	 new_cluster/1,
 	 delete_cluster/1,
-	 deploy_application/2
+	 deploy_application/2,
+	 remove_application/3
 	 
 	]).
 
@@ -37,11 +38,21 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%% 
+%% Deploy an application ApplicationId on host that node  KubeletNode are
 %% @end
 %%--------------------------------------------------------------------
 deploy_application(ApplicationId,KubeletNode)->
-    {ok,ApplicationId,WorkerNode}=rpc:call(KubeletNode,kubelet,deploy_application,[ApplicationId],2*5000).
+    {ok,ApplicationId,WorkerNode}=rpc:call(KubeletNode,kubelet,deploy_application,[ApplicationId],2*5000),
+    {ok,ApplicationId,KubeletNode,WorkerNode}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Remove an application ApplicationId on host that node  KubeletNode are
+%% @end
+%%--------------------------------------------------------------------
+remove_application(ApplicationId,KubeletNode,WorkerNode)->
+    ok=rpc:call(KubeletNode,kubelet,remove_application,[ApplicationId,WorkerNode],2*5000),
+    ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

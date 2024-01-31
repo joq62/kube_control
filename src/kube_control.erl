@@ -2,7 +2,7 @@
 %%% @author c50 <joq62@c50>
 %%% @copyright (C) 2023, c50
 %%% @doc
-%%% Data: Nodename,cookie, node, status(allocated,free,stopped)
+%%% Controls a cluster
 %%% @end
 %%% Created : 18 Apr 2023 by c50 <joq62@c50>
 %%%-------------------------------------------------------------------
